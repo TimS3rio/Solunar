@@ -1,0 +1,70 @@
+import com.timserio.buildsrc.LocationService
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'kotlin-kapt'
+apply plugin: KtLint.ktLint
+
+android {
+    namespace ProjectConfig.appId
+    compileSdk ProjectConfig.compileSdk
+
+    defaultConfig {
+        minSdk ProjectConfig.minSdk
+        targetSdk ProjectConfig.targetSdk
+        versionCode ProjectConfig.versionCode
+        versionName ProjectConfig.versionName
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+
+        sourceCompatibility JavaVersion.VERSION_18
+        targetCompatibility JavaVersion.VERSION_18
+    }
+    kotlinOptions {
+        jvmTarget = '18'
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.4.3'
+    }
+}
+
+dependencies {
+    implementation AndroidX.coreKtx
+    implementation AndroidX.lifecycle
+    implementation Compose.activityCompose
+    implementation platform(Compose.bom)
+    implementation Compose.ui
+    implementation Compose.uiGraphics
+    implementation Compose.toolingPreview
+    implementation Compose.material3
+    implementation Compose.hiltNavigationCompose
+    implementation Compose.navigation
+    implementation Compose.permission
+    implementation LocationService.location
+    implementation DaggerHilt.hilt
+    kapt DaggerHilt.hiltCompiler
+
+    testImplementation Testing.junit
+    androidTestImplementation Testing.extJunit
+    androidTestImplementation Testing.espressoCore
+    androidTestImplementation platform(Compose.bom)
+    androidTestImplementation Testing.composeJunit
+    debugImplementation Testing.composeTooling
+    debugImplementation Testing.composeManifest
+}

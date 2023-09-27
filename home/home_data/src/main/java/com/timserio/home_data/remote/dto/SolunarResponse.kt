@@ -1,0 +1,40 @@
+package com.timserio.home_data.remote.dto
+
+import com.squareup.moshi.Json
+
+data class SolunarResponse(
+    @field:Json(name = "sunRise") var sunRise: String? = null,
+    @field:Json(name = "sunTransit") var sunTransit: String? = null,
+    @field:Json(name = "sunSet") var sunSet: String? = null,
+    @field:Json(name = "moonRise") var moonRise: String? = null,
+    @field:Json(name = "moonTransit") var moonTransit: String? = null,
+    @field:Json(name = "moonUnder") var moonUnder: String? = null,
+    @field:Json(name = "moonSet") var moonSet: String? = null,
+    @field:Json(name = "moonPhase") var moonPhase: String? = null,
+    @field:Json(name = "moonIllumination") var moonIllumination: Double? = null,
+    @field:Json(name = "sunRiseDec") var sunRiseDec: Double? = null,
+    @field:Json(name = "sunTransitDec") var sunTransitDec: Double? = null,
+    @field:Json(name = "sunSetDec") var sunSetDec: Double? = null,
+    @field:Json(name = "moonRiseDec") var moonRiseDec: Double? = null,
+    @field:Json(name = "moonSetDec") var moonSetDec: Double? = null,
+    @field:Json(name = "moonTransitDec") var moonTransitDec: Double? = null,
+    @field:Json(name = "moonUnderDec") var moonUnderDec: Double? = null,
+    @field:Json(name = "minor1StartDec") var minor1StartDec: Double? = null,
+    @field:Json(name = "minor1Start") var minor1Start: String? = null,
+    @field:Json(name = "minor1StopDec") var minor1StopDec: Double? = null,
+    @field:Json(name = "minor1Stop") var minor1Stop: String? = null,
+    @field:Json(name = "minor2StartDec") var minor2StartDec: Double? = null,
+    @field:Json(name = "minor2Start") var minor2Start: String? = null,
+    @field:Json(name = "minor2StopDec") var minor2StopDec: Double? = null,
+    @field:Json(name = "minor2Stop") var minor2Stop: String? = null,
+    @field:Json(name = "major1StartDec") var major1StartDec: Double? = null,
+    @field:Json(name = "major1Start") var major1Start: String? = null,
+    @field:Json(name = "major1StopDec") var major1StopDec: Double? = null,
+    @field:Json(name = "major1Stop") var major1Stop: String? = null,
+    @field:Json(name = "major2StartDec") var major2StartDec: Double? = null,
+    @field:Json(name = "major2Start") var major2Start: String? = null,
+    @field:Json(name = "major2StopDec") var major2StopDec: Double? = null,
+    @field:Json(name = "major2Stop") var major2Stop: String? = null,
+    @field:Json(name = "dayRating") var dayRating: Int? = null,
+    @field:Json(name = "hourlyRating") var hourlyRating: HourlyRating? = HourlyRating()
+)
