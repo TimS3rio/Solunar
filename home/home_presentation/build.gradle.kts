@@ -15,4 +15,7 @@ dependencies {
     "implementation"(project(Modules.core))
     "implementation"(project(Modules.coreUi))
     "implementation"(project(Modules.homeDomain))
+    "implementation"(project(Modules.selectLocationPresentation))
+    "testImplementation"(project(Modules.testUtils))
+    "testImplementation"(Testing.coroutines)
 }

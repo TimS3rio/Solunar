@@ -55,7 +55,6 @@ dependencies {
     implementation Compose.material3
     implementation Compose.hiltNavigationCompose
     implementation Compose.navigation
-    implementation Compose.permission
     implementation LocationService.location
     implementation DaggerHilt.hilt
     kapt DaggerHilt.hiltCompiler

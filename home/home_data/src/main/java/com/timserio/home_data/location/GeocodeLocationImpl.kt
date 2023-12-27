@@ -1,6 +1,6 @@
 package com.timserio.home_data.location
 
-import android.app.Application
+import android.content.Context
 import android.location.Geocoder
 import android.os.Build
 import com.timserio.home_domain.location.GeocodeLocation
@@ -12,10 +12,10 @@ import java.util.Locale
 import javax.inject.Inject
 
 class GeocodeLocationImpl @Inject constructor(
-    private val app: Application
+    private val context: Context
 ) : GeocodeLocation {
     override fun geocodeLocation(location: Pair<Double, Double>, callback: (LocationData) -> Unit) {
-        val geocoder = Geocoder(app, Locale.getDefault())
+        val geocoder = Geocoder(context, Locale.getDefault())
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             geocoder.getFromLocation(location.first, location.second, 1) {
                 callback(

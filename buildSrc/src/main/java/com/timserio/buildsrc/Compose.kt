@@ -13,9 +13,9 @@ object Compose {
     private const val hiltNavigationComposeVersion = "1.0.0-beta01"
     const val hiltNavigationCompose = "androidx.hilt:hilt-navigation-compose:$hiltNavigationComposeVersion"
 
-    private const val accompanistVersion = "0.30.1"
-    const val permission = "com.google.accompanist:accompanist-permissions:$accompanistVersion"
-
     private const val navigationVersion = "1.7.0"
     const val navigation = "androidx.navigation:navigation-compose:$navigationVersion"
+
+    private const val composeMapsVersion = "1.0.0"
+    const val maps = "com.google.maps.android:maps-compose:$composeMapsVersion"
 }

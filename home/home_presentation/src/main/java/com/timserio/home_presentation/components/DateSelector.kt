@@ -30,12 +30,16 @@ fun DateSelector(
     onNextDayClick: () -> Unit,
 ) {
     val dateContentDesc = stringResource(id = R.string.date)
+    val previousDay = stringResource(id = R.string.prev_day)
+    val nextDay = stringResource(id = R.string.next_day)
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         IconButton(enabled = !isLoading, onClick = onPreviousDayClick) {
             Icon(
                 Icons.Default.ArrowBack,
-                stringResource(id = R.string.prev_day),
-                modifier = Modifier.size(20.dp),
+                previousDay,
+                modifier = Modifier
+                    .size(20.dp)
+                    .semantics { contentDescription = previousDay },
                 tint = MaterialTheme.colorScheme.tertiary
             )
         }
@@ -51,8 +55,10 @@ fun DateSelector(
         IconButton(enabled = !isLoading, onClick = onNextDayClick) {
             Icon(
                 Icons.Default.ArrowForward,
-                stringResource(id = R.string.next_day),
-                modifier = Modifier.size(20.dp),
+                nextDay,
+                modifier = Modifier
+                    .size(20.dp)
+                    .semantics { contentDescription = nextDay },
                 tint = MaterialTheme.colorScheme.tertiary
             )
         }

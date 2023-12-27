@@ -3,7 +3,9 @@ package com.timserio.home_presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.timserio.core.util.StateReducerFlow
+import com.timserio.home_domain.location.GeocodeLocation
 import com.timserio.home_domain.location.LocationTracker
+import com.timserio.home_domain.model.SolunarData
 import com.timserio.home_domain.use_case.HomeUseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -12,7 +14,8 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val homeUseCases: HomeUseCases,
-    private val locationTracker: LocationTracker
+    private val locationTracker: LocationTracker,
+    private val geocodeLocation: GeocodeLocation
 ) : ViewModel() {
 
     val state = StateReducerFlow(
@@ -38,11 +41,40 @@ class HomeViewModel @Inject constructor(
                 )
                 getSolunarTimes(result)
             }
-            is HomeEvent.OnLocationGranted -> getCurrentLocation()
-            is HomeEvent.OnLocationDenied -> {
-                result = currentState.copy(isLocationRequestSuccessful = false)
+            is HomeEvent.OnLocationGranted -> {
+                result = currentState.copy(
+                    requestLocationState = RequestLocationState.REQUESTING_PERMISSIONS
+                )
+                getCurrentLocation()
             }
-            is HomeEvent.OnLoading -> result = currentState.copy(isLoading = true, isLocationRequestSuccessful = true)
+            is HomeEvent.OnDismissRationale -> {
+                result = currentState.copy(
+                    showPermissionRationale = false
+                )
+            }
+            is HomeEvent.OnDismissGoToAppSettings -> {
+                result = currentState.copy(
+                    showPermissionRationale = false
+                )
+            }
+            is HomeEvent.OnPermissionResult -> {
+                if (!event.isGranted && !currentState.showPermissionRationale) {
+                    result = currentState.copy(
+                        showPermissionRationale = true
+                    )
+                }
+            }
+            is HomeEvent.OnSetDate -> {
+                result = currentState.copy(
+                    date = event.date
+                )
+            }
+            is HomeEvent.OnLoading -> {
+                result = currentState.copy(
+                    isLoading = true,
+                    requestLocationState = RequestLocationState.LOCATION_REQUEST_SUCCESSFUL
+                )
+            }
             is HomeEvent.OnCurrentLocationLoaded -> {
                 event.location?.let { locationData ->
                     letTwo(locationData.latitude, locationData.longitude) { lat, long ->
@@ -55,30 +87,55 @@ class HomeViewModel @Inject constructor(
                         )
                         getSolunarTimes(result)
                     } ?: run {
-                        result = currentState.copy(isLocationRequestSuccessful = false)
+                        result = currentState.copy(requestLocationState = RequestLocationState.LOCATION_REQUEST_FAILED)
                     }
                 } ?: run {
-                    result = currentState.copy(isLocationRequestSuccessful = false)
+                    result = currentState.copy(requestLocationState = RequestLocationState.LOCATION_REQUEST_FAILED)
                 }
             }
             is HomeEvent.OnSolunarTimesLoaded -> {
                 event.data?.let {
-                    val formattedTimes = homeUseCases.formatSolunarTimes(it)
-                    var dayRating = Pair(0, 0f)
-                    it.hourlyRatings?.let { hourlyRatings ->
-                        dayRating = homeUseCases.getDayRating(hourlyRatings)
+                    if (isSolunarDataEmpty(it)) {
+                        result = currentState.copy(isLoading = false, isSolunarResponseSuccessful = false)
+                    } else {
+                        val formattedTimes = homeUseCases.formatSolunarTimes(it)
+                        var dayRating = Pair(0, 0f)
+                        it.hourlyRatings?.let { hourlyRatings ->
+                            dayRating = homeUseCases.getDayRating(hourlyRatings)
+                        }
+                        result = currentState.copy(
+                            majorOne = formattedTimes.majorOne,
+                            majorTwo = formattedTimes.majorTwo,
+                            minorOne = formattedTimes.minorOne,
+                            minorTwo = formattedTimes.minorTwo,
+                            dayRating = dayRating,
+                            isLoading = false,
+                            isSolunarResponseSuccessful = true
+                        )
                     }
-                    result = currentState.copy(
-                        majorOne = formattedTimes.majorOne,
-                        majorTwo = formattedTimes.majorTwo,
-                        minorOne = formattedTimes.minorOne,
-                        minorTwo = formattedTimes.minorTwo,
-                        dayRating = dayRating,
-                        isLoading = false,
-                        isSolunarResponseSuccessful = true
-                    )
                 } ?: run {
                     result = currentState.copy(isLoading = false, isSolunarResponseSuccessful = false)
+                }
+            }
+            is HomeEvent.OnLocationFromMapGeocoded -> {
+                val location = event.location
+                location?.let {
+                    letTwo(it.latitude, it.longitude) { lat, long ->
+                        result = currentState.copy(
+                            latLong = Pair(lat, long),
+                            requestLocationState = RequestLocationState.LOCATION_REQUEST_SUCCESSFUL,
+                            locationName = homeUseCases.getLocationName(
+                                it.locality,
+                                it.adminArea
+                            )
+                        )
+                        getSolunarTimes(result)
+                    }
+                }
+            }
+            is HomeEvent.OnLocationSelectedFromMap -> {
+                geocodeLocation.geocodeLocation(Pair(event.latLong.first, event.latLong.second)) {
+                    state.handleEvent(HomeEvent.OnLocationFromMapGeocoded(it))
                 }
             }
         }
@@ -115,6 +172,13 @@ class HomeViewModel @Inject constructor(
                 state.handleEvent(HomeEvent.OnCurrentLocationLoaded(null))
             }
         }
+    }
+
+    private fun isSolunarDataEmpty(solunarData: SolunarData): Boolean {
+        return solunarData.majorOneStart == null && solunarData.majorOneEnd == null &&
+            solunarData.majorTwoStart == null && solunarData.majorTwoEnd == null &&
+            solunarData.minorOneStart == null && solunarData.minorOneEnd == null &&
+            solunarData.minorTwoStart == null && solunarData.minorTwoEnd == null
     }
 
     private fun <T1 : Any, T2 : Any, R : Any> letTwo(p1: T1?, p2: T2?, block: (T1, T2) -> R?): R? {

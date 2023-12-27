@@ -1,3 +1,4 @@
+import com.timserio.buildsrc.GoogleMaps
 import com.timserio.buildsrc.LocationService
 
 plugins {
@@ -20,14 +21,24 @@ android {
         versionName = ProjectConfig.versionName
 
         testInstrumentationRunner = "com.timserio.solunar.HiltTestRunner"
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
         vectorDrawables {
             useSupportLibrary = true
         }
     }
 
+    testOptions {
+        execution = "ANDROID_TEST_ORCHESTRATOR"
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            resValue("string", "clear_text_config", "false")
+        }
+        getByName("debug") {
+            isMinifyEnabled = false
+            resValue("string", "clear_text_config", "true")
         }
     }
     compileOptions {
@@ -56,6 +67,8 @@ dependencies {
     implementation(project(Modules.homeData))
     implementation(project(Modules.homeDomain))
     implementation(project(Modules.homePresentation))
+    implementation(project(Modules.selectLocationPresentation))
+    implementation(project(Modules.testUtils))
 
     implementation(AndroidX.coreKtx)
     implementation(AndroidX.lifecycle)
@@ -66,8 +79,8 @@ dependencies {
     implementation(Compose.toolingPreview)
     implementation(Compose.material3)
     implementation(Compose.hiltNavigationCompose)
-    implementation(Compose.permission)
     implementation(LocationService.location)
+    implementation(GoogleMaps.maps)
     implementation(DaggerHilt.hilt)
     kapt(DaggerHilt.hiltCompiler)
 
@@ -79,6 +92,12 @@ dependencies {
     androidTestImplementation(Testing.testRule)
     debugImplementation(Testing.composeTooling)
     debugImplementation(Testing.composeManifest)
+    androidTestUtil(Testing.orchestrator)
+    androidTestImplementation(Testing.composeNavigation)
+    androidTestImplementation(Testing.uiAutomator)
+    androidTestImplementation(Testing.mockWebServer)
+    androidTestImplementation(Retrofit.retrofit)
+    androidTestImplementation(Retrofit.moshiConverter)
     androidTestImplementation(DaggerHilt.hiltTesting)
     kaptAndroidTest(DaggerHilt.hiltCompiler)
     testImplementation(DaggerHilt.hiltTesting)

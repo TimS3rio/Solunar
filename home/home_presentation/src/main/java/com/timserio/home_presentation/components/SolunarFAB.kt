@@ -34,8 +34,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.timserio.core.R
 import com.timserio.core_ui.ui.theme.DarkBlue
 import com.timserio.core_ui.ui.theme.TransparentWhite
 import com.timserio.core_ui.ui.theme.shapeScheme
@@ -52,7 +56,8 @@ enum class FloatingActionButtonState {
 }
 
 enum class Identifier {
-    GET_CURRENT_LOCATION
+    GET_CURRENT_LOCATION,
+    SELECT_LOCATION
 }
 
 data class MiniFAB(
@@ -67,6 +72,7 @@ fun SolunarFAB(
     fabState: FloatingActionButtonState,
     onFabStateChanged: (FloatingActionButtonState) -> Unit,
     items: List<MiniFAB>,
+    onSelectLocationClicked: () -> Unit,
     onGetCurrentLocationClicked: () -> Unit
 ) {
     val transition = updateTransition(targetState = fabState, label = TRANSITION)
@@ -91,8 +97,12 @@ fun SolunarFAB(
             items.forEach {
                 MiniFloatingActionButton(
                     miniFab = it,
-                    onMiniFabClicked = {
-                        onGetCurrentLocationClicked()
+                    onMiniFabClicked = { miniFAB ->
+                        if (miniFAB.id == Identifier.GET_CURRENT_LOCATION) {
+                            onGetCurrentLocationClicked()
+                        } else {
+                            onSelectLocationClicked()
+                        }
                         onFabStateChanged(FloatingActionButtonState.COLLAPSED)
                     },
                     alpha = alpha,
@@ -102,7 +112,9 @@ fun SolunarFAB(
                 Spacer(modifier = Modifier.size(16.dp))
             }
         }
+        val editLocation = stringResource(id = R.string.edit_location)
         FloatingActionButton(
+            modifier = Modifier.semantics { contentDescription = editLocation },
             onClick = {
                 onFabStateChanged(
                     if (fabState == FloatingActionButtonState.EXPANDED) {
@@ -163,6 +175,7 @@ private fun MiniFloatingActionButton(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 )
+                .semantics { contentDescription = miniFab.label }
         ) {
             translate(left = -15f) {
                 drawCircle(

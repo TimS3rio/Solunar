@@ -1,12 +1,20 @@
 package com.timserio.solunar
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.test.platform.app.InstrumentationRegistry
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import androidx.compose.ui.test.performClick
+import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.testing.TestNavHostController
 import com.timserio.core.R
+import com.timserio.home_data.di.HomeDataModule
 import com.timserio.home_domain.use_case.FormatDateForRequest
 import com.timserio.home_domain.use_case.FormatSolunarTimes
 import com.timserio.home_domain.use_case.GetDayRating
@@ -14,48 +22,47 @@ import com.timserio.home_domain.use_case.GetLocationName
 import com.timserio.home_domain.use_case.GetSolunarTimes
 import com.timserio.home_domain.use_case.GetTimezoneRegion
 import com.timserio.home_domain.use_case.HomeUseCases
+import com.timserio.home_presentation.HomeEvent
 import com.timserio.home_presentation.HomeScreen
 import com.timserio.home_presentation.HomeState
 import com.timserio.home_presentation.HomeViewModel
+import com.timserio.home_presentation.RequestLocationState
+import com.timserio.solunar.location.GeocodeLocationFake
 import com.timserio.solunar.location.LocationTrackerFake
+import com.timserio.solunar.navigation.Route
+import com.timserio.solunar.navigation.SolunarNavHost
 import com.timserio.solunar.repository.HomeRepositoryFake
 import com.timserio.solunar.ui.theme.SolunarTheme
+import com.timserio.test_utils.TestConstants
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.UninstallModules
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-@ExperimentalPermissionsApi
 @HiltAndroidTest
+@UninstallModules(HomeDataModule::class)
 class HomeScreenTest {
-
-    companion object {
-        private const val FORMATTED_MAJOR_ONE = "12:00 AM - 2:00 AM"
-        private const val FORMATTED_MAJOR_TWO = "1:15 PM - 3:15 PM"
-        private const val FORMATTED_MINOR_ONE = "10:59 PM - 11:59 PM"
-        private const val FORMATTED_MINOR_TWO = "8:30 AM - 9:30 AM"
-        private const val LATITUDE = "45.8711"
-        private const val LONGITUDE = "-89.7093"
-        private const val TIMEZONE = -5
-        private const val LOCATION_NAME = "Minocqua, WI"
-        private const val DAY_RATING_VALUE = "80"
-    }
 
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
     @get:Rule(order = 1)
     val composeRule = createComposeRule()
+    lateinit var navController: TestNavHostController
 
     private lateinit var homeRepositoryFake: HomeRepositoryFake
     private lateinit var locationTrackerFake: LocationTrackerFake
+    private lateinit var geocodeLocationFake: GeocodeLocationFake
     private lateinit var homeUseCases: HomeUseCases
     private lateinit var homeViewModel: HomeViewModel
 
     @Before
     fun setup() {
         homeRepositoryFake = HomeRepositoryFake()
+        geocodeLocationFake = GeocodeLocationFake()
         homeUseCases = HomeUseCases(
             FormatDateForRequest(),
             FormatSolunarTimes(),
@@ -65,7 +72,7 @@ class HomeScreenTest {
             GetDayRating()
         )
         locationTrackerFake = LocationTrackerFake()
-        homeViewModel = HomeViewModel(homeUseCases, locationTrackerFake)
+        homeViewModel = HomeViewModel(homeUseCases, locationTrackerFake, geocodeLocationFake)
     }
 
     @Test
@@ -75,53 +82,59 @@ class HomeScreenTest {
                 HomeScreen(
                     HomeState(
                         isLoading = false,
-                        latLong = Pair(LATITUDE, LONGITUDE),
-                        timeZone = TIMEZONE,
-                        locationName = LOCATION_NAME,
-                        majorOne = FORMATTED_MAJOR_ONE,
-                        majorTwo = FORMATTED_MAJOR_TWO,
-                        minorOne = FORMATTED_MINOR_ONE,
-                        minorTwo = FORMATTED_MINOR_TWO,
+                        latLong = Pair(TestConstants.LATITUDE, TestConstants.LONGITUDE),
+                        timeZone = TestConstants.TIMEZONE,
+                        locationName = TestConstants.MINOCQUA_WI,
+                        majorOne = TestConstants.FORMATTED_MAJOR_ONE,
+                        majorTwo = TestConstants.FORMATTED_MAJOR_TWO,
+                        minorOne = TestConstants.FORMATTED_MINOR_ONE,
+                        minorTwo = TestConstants.FORMATTED_MINOR_TWO,
                         dayRating = Pair(80, .8f),
-                        isLocationRequestSuccessful = true,
+                        requestLocationState = RequestLocationState.LOCATION_REQUEST_SUCCESSFUL,
                         isSolunarResponseSuccessful = true
-                    )
-                ) {
-                    homeViewModel.onEvent(it)
-                }
+                    ),
+                    getTestPermissionLauncher(),
+                    {},
+                    { event -> homeViewModel.state.handleEvent(event) },
+                    null
+                )
             }
         }
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.location_name))
-            .assertTextEquals(LOCATION_NAME)
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.location_name))
+            .assertTextEquals(TestConstants.MINOCQUA_WI)
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.date))
-            .assertTextEquals(getResourceString(R.string.today))
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.date))
+            .assertTextEquals(UITestingUtil.getResourceString(R.string.today))
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.major_one))
-            .assertTextEquals(FORMATTED_MAJOR_ONE)
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.major_one))
+            .assertTextEquals(TestConstants.FORMATTED_MAJOR_ONE)
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.major_two))
-            .assertTextEquals(FORMATTED_MAJOR_TWO)
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.major_two))
+            .assertTextEquals(TestConstants.FORMATTED_MAJOR_TWO)
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.minor_one))
-            .assertTextEquals(FORMATTED_MINOR_ONE)
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.minor_one))
+            .assertTextEquals(TestConstants.FORMATTED_MINOR_ONE)
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.minor_two))
-            .assertTextEquals(FORMATTED_MINOR_TWO)
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.minor_two))
+            .assertTextEquals(TestConstants.FORMATTED_MINOR_TWO)
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.day_rating))
-            .assertTextEquals(DAY_RATING_VALUE)
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.day_rating))
+            .assertTextEquals(TestConstants.DAY_RATING_VALUE)
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.error_text))
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.edit_location))
+            .assertExists()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.error_text))
             .assertDoesNotExist()
     }
 
@@ -132,26 +145,41 @@ class HomeScreenTest {
                 HomeScreen(
                     HomeState(
                         isLoading = false,
-                        latLong = Pair(LATITUDE, LONGITUDE),
-                        isLocationRequestSuccessful = true,
+                        latLong = Pair(TestConstants.LATITUDE, TestConstants.LONGITUDE),
+                        requestLocationState = RequestLocationState.LOCATION_REQUEST_SUCCESSFUL,
                         isSolunarResponseSuccessful = false
-                    )
-                ) {
-                    homeViewModel.onEvent(it)
-                }
+                    ),
+                    getTestPermissionLauncher(),
+                    {},
+                    { event -> homeViewModel.state.handleEvent(event) },
+                    null
+                )
             }
         }
 
+        val errorMsg = UITestingUtil.getResourceString(R.string.error_msg)
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.error_text))
-            .assertTextEquals(getResourceString(R.string.error_msg))
+            .onNodeWithContentDescription(errorMsg)
+            .assertTextEquals(errorMsg)
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.loading))
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.select_a_location))
+            .assertExists()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.get_current_location))
+            .assertExists()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.edit_location))
             .assertDoesNotExist()
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.location_name))
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.loading))
+            .assertDoesNotExist()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.location_name))
             .assertDoesNotExist()
     }
 
@@ -162,29 +190,34 @@ class HomeScreenTest {
                 HomeScreen(
                     HomeState(
                         isLoading = true,
-                        latLong = Pair(LATITUDE, LONGITUDE),
-                        timeZone = TIMEZONE,
-                        isLocationRequestSuccessful = true,
+                        requestLocationState = RequestLocationState.LOCATION_REQUEST_SUCCESSFUL,
                         isSolunarResponseSuccessful = null
-                    )
-                ) {
-                    homeViewModel.onEvent(it)
-                }
+                    ),
+                    getTestPermissionLauncher(),
+                    {},
+                    { event -> homeViewModel.state.handleEvent(event) },
+                    null
+                )
             }
         }
 
         val nodes = composeRule
-            .onAllNodesWithContentDescription(getResourceString(R.string.loading))
+            .onAllNodesWithContentDescription(UITestingUtil.getResourceString(R.string.loading))
+
         for (i in 0..5) {
-            nodes[i].assertExists()
+            nodes.onFirst().assertExists()
         }
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.location_name))
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.edit_location))
+            .assertExists()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.location_name))
             .assertDoesNotExist()
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.error_text))
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.error_text))
             .assertDoesNotExist()
     }
 
@@ -192,27 +225,98 @@ class HomeScreenTest {
     fun getLocationFailedTest() {
         composeRule.setContent {
             SolunarTheme {
-                HomeScreen(HomeState(isLocationRequestSuccessful = false)) {
-                    homeViewModel.onEvent(it)
-                }
+                HomeScreen(
+                    HomeState(requestLocationState = RequestLocationState.LOCATION_REQUEST_FAILED),
+                    getTestPermissionLauncher(),
+                    {},
+                    { event -> homeViewModel.state.handleEvent(event) },
+                    null
+                )
+            }
+        }
+
+        val noLocationMsg = UITestingUtil.getResourceString(R.string.no_location_permission_msg)
+        composeRule
+            .onNodeWithContentDescription(noLocationMsg)
+            .assertTextEquals(noLocationMsg)
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.select_a_location))
+            .assertExists()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.get_current_location))
+            .assertExists()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.edit_location))
+            .assertDoesNotExist()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.loading))
+            .assertDoesNotExist()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.location_name))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun noLocationSetTest() {
+        composeRule.setContent {
+            SolunarTheme {
+                HomeScreen(
+                    HomeState(),
+                    getTestPermissionLauncher(),
+                    {},
+                    { event -> homeViewModel.state.handleEvent(event) },
+                    null
+                )
             }
         }
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.error_text))
-            .assertTextEquals(getResourceString(R.string.turn_on_location_desc))
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.get_location_prompt))
+            .assertExists()
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.loading))
-            .assertDoesNotExist()
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.select_a_location))
+            .assertExists()
 
         composeRule
-            .onNodeWithContentDescription(getResourceString(R.string.location_name))
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.get_current_location))
+            .assertExists()
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.edit_location))
             .assertDoesNotExist()
     }
 
-    private fun getResourceString(id: Int): String {
-        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
-        return targetContext.resources.getString(id)
+    @Test
+    fun selectLocationClickTest() {
+        composeRule.setContent {
+            navController = TestNavHostController(LocalContext.current)
+            navController.navigatorProvider.addNavigator(ComposeNavigator())
+            SolunarTheme {
+                SolunarNavHost(navController = navController, homeViewModel = homeViewModel, permissionResultLauncher = getTestPermissionLauncher())
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription(UITestingUtil.getResourceString(R.string.select_a_location))
+            .performClick()
+
+        val route = navController.currentBackStackEntry?.destination?.route
+        Assert.assertEquals(Route.SELECT_LOCATION, route)
+    }
+
+    @Composable
+    private fun getTestPermissionLauncher(): ActivityResultLauncher<String> {
+        return rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = {
+                homeViewModel.state.handleEvent(HomeEvent.OnLocationGranted)
+            }
+        )
     }
 }

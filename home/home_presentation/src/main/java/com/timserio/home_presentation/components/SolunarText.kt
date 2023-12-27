@@ -44,14 +44,11 @@ fun SolunarText(
 @Composable
 fun ErrorText(
     isLocationRequestSuccessful: Boolean?,
-    isLocationPermissionGranted: Boolean,
     isSolunarResponseSuccessful: Boolean?
 ) {
     if (isLocationRequestSuccessful == false || isSolunarResponseSuccessful == false) {
         val errorMsg = if (isLocationRequestSuccessful == false) {
-            if (isLocationPermissionGranted) {
-                stringResource(id = R.string.turn_on_location_desc)
-            } else stringResource(id = R.string.no_location_permission_msg)
+            stringResource(id = R.string.no_location_permission_msg)
         } else {
             stringResource(id = R.string.error_msg)
         }

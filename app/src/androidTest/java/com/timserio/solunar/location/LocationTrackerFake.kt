@@ -2,6 +2,7 @@ package com.timserio.solunar.location
 
 import com.timserio.home_domain.location.LocationData
 import com.timserio.home_domain.location.LocationTracker
+import com.timserio.test_utils.TestConstants
 
 class LocationTrackerFake : LocationTracker {
     var shouldReturnError = false
@@ -10,10 +11,10 @@ class LocationTrackerFake : LocationTracker {
             null
         } else {
             LocationData(
-                45.8711,
-                -89.7093,
-                "Wisconsin",
-                "Minocqua"
+                TestConstants.LATITUDE,
+                TestConstants.LONGITUDE,
+                TestConstants.ADMIN_AREA,
+                TestConstants.LOCALITY
             )
         }
     }

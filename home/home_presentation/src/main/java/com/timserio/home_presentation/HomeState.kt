@@ -13,6 +13,13 @@ data class HomeState(
     val minorOne: String = "",
     val minorTwo: String = "",
     val dayRating: Pair<Int, Float> = Pair(-1, 0f),
-    val isLocationRequestSuccessful: Boolean? = null,
+    val requestLocationState: RequestLocationState? = null,
+    val showPermissionRationale: Boolean = false,
     val isSolunarResponseSuccessful: Boolean? = null
 )
+
+enum class RequestLocationState {
+    REQUESTING_PERMISSIONS,
+    LOCATION_REQUEST_FAILED,
+    LOCATION_REQUEST_SUCCESSFUL
+}
